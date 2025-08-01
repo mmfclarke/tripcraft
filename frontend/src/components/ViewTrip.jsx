@@ -1,10 +1,40 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 function ViewTrip() {
   const [showShareMsg, setShowShareMsg] = useState(false);
-  const [showSafetyMsg, setShowSafetyMsg] = useState(false);
   const [showPhrasesMsg, setShowPhrasesMsg] = useState(false);
+  // Safety tips integration
+  const [safetyTips, setSafetyTips] = useState(null);
+  const [safetyLoading, setSafetyLoading] = useState(false);
+  const [safetyError, setSafetyError] = useState('');
+  // Fetch safety tips from backend microservice
+  const fetchSafetyTips = async () => {
+    if (!trip || !trip._id) {
+      return;
+    }
+    setSafetyLoading(true);
+    setSafetyError('');
+    try {
+      const response = await fetch(`http://localhost:5000/trips/${trip._id}/safety-tips`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSafetyTips(data.safetyTips);
+      } else {
+        setSafetyError(data.error || 'Failed to fetch safety tips');
+      }
+    } catch (error) {
+      console.error('Error fetching safety tips:', error);
+      setSafetyError('Network error - please try again');
+    } finally {
+      setSafetyLoading(false);
+    }
+  };
   const navigate = useNavigate();
   const { id } = useParams();
   const [trip, setTrip] = useState(null);
@@ -151,7 +181,7 @@ function ViewTrip() {
                 minWidth: 220,
                 maxWidth: 260,
               }}
-              onMouseLeave={() => setShowSafetyMsg(false)}
+              // ...existing code...
             >
               <div style={{ fontWeight: 700, fontSize: '1.08rem', marginBottom: 10, textAlign: 'center' }}>
                 Local Safety & Etiquette Tips
@@ -181,15 +211,56 @@ function ViewTrip() {
                   e.target.style.background = '#ffe066';
                   e.target.style.border = '2px solid #ffe066';
                 }}
-                onClick={() => setShowSafetyMsg(true)}
+                onClick={fetchSafetyTips}
               >
-                Local Safety Tips
+                {safetyLoading ? 'Generating Tips...' : 'Local Safety Tips'}
               </button>
-              {showSafetyMsg && (
-                <div style={{ color: 'green', marginTop: 10, fontWeight: 600, fontSize: '1.01rem', textAlign: 'center' }}>
-                  Feature Coming Soon!
+              {safetyError && (
+                <div style={{ color: 'red', marginTop: 10, fontWeight: 600, fontSize: '0.9rem', textAlign: 'center' }}>
+                  {safetyError}
                 </div>
               )}
+            {/* Safety Tips Results Section */}
+            {safetyTips && (
+              <div style={{
+                background: '#fff',
+                border: '2px solid #4caf50',
+                borderRadius: 10,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                padding: '16px',
+                marginTop: 18,
+                maxWidth: 260,
+              }}>
+                <div style={{ fontWeight: 700, fontSize: '1.08rem', marginBottom: 12, textAlign: 'center', color: '#4caf50' }}>
+                  Safety Tips for {trip?.destination}
+                </div>
+                <div style={{
+                  fontSize: '0.85rem',
+                  lineHeight: 1.5,
+                  color: '#333',
+                  maxHeight: 300,
+                  overflowY: 'auto',
+                  whiteSpace: 'pre-wrap'
+                }}>
+                  {safetyTips.tips}
+                </div>
+                <button
+                  onClick={() => setSafetyTips(null)}
+                  style={{
+                    marginTop: 12,
+                    background: '#f5f5f5',
+                    border: '1px solid #ddd',
+                    borderRadius: 5,
+                    padding: '6px 12px',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    width: '100%'
+                  }}
+                >
+                  Hide Tips
+                </button>
+              </div>
+            )}
             </div>
             {/* Common Translation Phrase Box */}
             <div

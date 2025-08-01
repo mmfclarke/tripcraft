@@ -26,6 +26,10 @@ function Login() {
         setError(data.error || 'Login failed');
       } else {
         setMessage(data.message || 'Login successful!');
+        // Store username in localStorage for session
+        if (form.username) {
+          localStorage.setItem('username', form.username);
+        }
         setTimeout(() => navigate('/dashboard'), 1000);
       }
     } catch (err) {

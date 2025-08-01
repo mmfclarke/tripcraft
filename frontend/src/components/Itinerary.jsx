@@ -316,8 +316,8 @@ function Itinerary() {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',
-              minWidth: 300,
-              maxWidth: 340,
+              minWidth: 220,
+              maxWidth: 250,
             }}>
               <div style={{ fontWeight: 700, fontSize: '1.15rem', marginBottom: 8 }}>Trip Details</div>
               <div style={{ marginBottom: 6 }}><b>Name:</b> {trip?.tripName || ''}</div>

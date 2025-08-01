@@ -1,12 +1,14 @@
 const mongoose = require('mongoose');
+const fetch = require('node-fetch');
 
 const tripSchema = new mongoose.Schema({
-// Trip schema
+  // Trip schema
   tripName: { type: String, required: true },
   destination: { type: String, required: true },
   startDate: { type: Date, required: true },
   endDate: { type: Date, required: true },
   travelers: { type: Number, required: true },
+  username: { type: String, required: true }, // Link trip to user
   // Itinerary is an array of { day: 'Day 1', activities: [...] }
   itinerary: [
     {
@@ -152,9 +154,9 @@ app.use((err, req, res, next) => {
 // Create Trip
 app.post('/trips', async (req, res) => {
   try {
-    const { tripName, destination, startDate, endDate, travelers } = req.body;
-    if (!tripName || !destination || !startDate || !endDate || !travelers) {
-      return res.status(400).json({ error: 'All fields are required' });
+    const { tripName, destination, startDate, endDate, travelers, username } = req.body;
+    if (!tripName || !destination || !startDate || !endDate || !travelers || !username) {
+      return res.status(400).json({ error: 'All fields are required, including username' });
     }
     // Calculate number of days
     const start = new Date(startDate);
@@ -174,6 +176,7 @@ app.post('/trips', async (req, res) => {
       startDate,
       endDate,
       travelers,
+      username,
       itinerary
     });
     await trip.save();
@@ -283,7 +286,11 @@ app.get('/trips/:id', async (req, res) => {
 // Get all trips (for dashboard list)
 app.get('/trips', async (req, res) => {
   try {
-    const trips = await Trip.find({}, '-itinerary -__v').sort({ createdAt: -1 });
+    const { username } = req.query;
+    if (!username) {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+    const trips = await Trip.find({ username }, '-itinerary -__v').sort({ createdAt: -1 });
     res.json({ trips });
   } catch (error) {
     console.error('Get all trips error:', error);
@@ -291,6 +298,62 @@ app.get('/trips', async (req, res) => {
   }
 });
 
+// Safety Tips endpoint - microservice integration
+app.post('/trips/:id/safety-tips', async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Get trip data from database
+    const trip = await Trip.findById(id);
+    if (!trip) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Trip not found' 
+      });
+    }
+
+    // Prepare data for microservice (matching your teammate's expected format)
+    const safetyTipsRequest = {
+      location: trip.destination,
+      startDate: trip.startDate,
+      endDate: trip.endDate,
+      numberOfTravelers: trip.travelers // Note: your schema uses 'travelers', their API expects 'numberOfTravelers'
+    };
+
+    // Call the Safety Tips microservice
+    const microserviceUrl = process.env.SAFETY_MICROSERVICE_URL || 'http://localhost:3001';
+
+    console.log('Calling microservice with data:', safetyTipsRequest);
+
+    const response = await fetch(`${microserviceUrl}/safety-tips`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(safetyTipsRequest)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Microservice responded with status: ${response.status}`);
+    }
+
+    const safetyTipsData = await response.json();
+
+    // Return the safety tips to frontend
+    res.json({
+      success: true,
+      tripId: id,
+      safetyTips: safetyTipsData
+    });
+
+  } catch (error) {
+    console.error('Error fetching safety tips:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch safety tips',
+      details: error.message
+    });
+  }
+});
 
 // Delete trip by ID
 app.delete('/trips/:id', async (req, res) => {

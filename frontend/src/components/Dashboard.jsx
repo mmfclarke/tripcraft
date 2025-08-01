@@ -10,7 +10,13 @@ function Dashboard() {
   const [hoveredCard, setHoveredCard] = useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:5000/trips')
+    const username = localStorage.getItem('username');
+    if (!username) {
+      setError('No username found. Please log in again.');
+      setLoading(false);
+      return;
+    }
+    fetch(`http://localhost:5000/trips?username=${encodeURIComponent(username)}`)
       .then(res => res.json())
       .then(data => {
         setTrips(data.trips || []);
@@ -23,7 +29,7 @@ function Dashboard() {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this trip?')) return;
+    if (!window.confirm('Are you sure you want to delete this trip? You will lose all your awesome trip details!')) return;
     setDeletingId(id);
     try {
       const res = await fetch(`http://localhost:5000/trips/${id}`, { method: 'DELETE' });
@@ -50,6 +56,7 @@ function Dashboard() {
           textAlign: 'center',
           color: '#fff',
         }}>Dashboard</h1>
+        {/* Error message under header removed as requested */}
         <nav style={{
           maxWidth: 1200,
           margin: '0 auto 2px auto',
@@ -99,9 +106,9 @@ function Dashboard() {
             {loading ? (
               <div style={{ textAlign: 'center', marginTop: 40 }}>Loading trips...</div>
             ) : error ? (
-              <div style={{ color: 'red', textAlign: 'center', marginTop: 40 }}>{error}</div>
+              <div style={{ color: '#fff', textAlign: 'center', marginTop: 40 }}>{error}</div>
             ) : trips.length === 0 ? (
-              <div style={{ textAlign: 'center', marginTop: 40 }}>No trips found.</div>
+              <div style={{ color: '#fff', textAlign: 'center', marginTop: 40 }}>No trips to display yet. Create your first trip now!</div>
             ) : (
               <div style={{
                 display: 'grid',

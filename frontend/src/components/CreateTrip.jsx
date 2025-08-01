@@ -27,6 +27,7 @@ function CreateTrip() {
     setError('');
     setSuccess('');
     try {
+      const username = localStorage.getItem('username');
       const res = await fetch('http://localhost:5000/trips', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -35,7 +36,8 @@ function CreateTrip() {
           destination: form.destination,
           startDate: form.startDate,
           endDate: form.endDate,
-          travelers: Number(form.travelers)
+          travelers: Number(form.travelers),
+          username // include username in request
         })
       });
       const data = await res.json();
