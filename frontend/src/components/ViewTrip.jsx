@@ -2,6 +2,67 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 function ViewTrip() {
+  // Helper to format safety tips into sections and bullet points
+  function formatSafetyTips(tips) {
+    if (!tips) return [];
+    // Split into sections by headers (lines ending with colon)
+    const sectionRegex = /([\w\s'"&]+:)/g;
+    let matches = [];
+    let result;
+    while ((result = sectionRegex.exec(tips)) !== null) {
+      // Only treat as header if not just a fragment (e.g., not 'existing Conditions:')
+      if (result[1].trim().split(' ').length > 1 || /^[A-Z]/.test(result[1].trim())) {
+        matches.push({ header: result[1].trim(), index: result.index });
+      }
+    }
+    // Helper to merge lines split by hyphens (e.g., 'First-' + 'Aid Kit:')
+    function mergeHyphenLines(arr) {
+      let merged = [];
+      let i = 0;
+      while (i < arr.length) {
+        let current = arr[i];
+        // If current ends with hyphen and next starts with lowercase or continues the word
+        if (i < arr.length - 1 && /-$/.test(current) && /^[a-z]/.test(arr[i + 1])) {
+          merged.push((current + arr[i + 1]).replace(/-\s*/, ''));
+          i += 2;
+        } else {
+          merged.push(current);
+          i++;
+        }
+      }
+      return merged;
+    }
+    // Remove lines that are just a colon or empty, and strip leading colon from tips
+    function cleanTipsArr(arr) {
+      return arr
+        .map(t => t.trim())
+        .filter(t => t.length > 0 && t !== ':' && t !== '•' && t !== '-')
+        .map(t => t.startsWith(':') ? t.slice(1).trim() : t);
+    }
+    let sections = [];
+    if (matches.length > 0) {
+      for (let i = 0; i < matches.length; i++) {
+        const start = matches[i].index + matches[i].header.length;
+        const end = (i + 1 < matches.length) ? matches[i + 1].index : tips.length;
+        const content = tips.slice(start, end).trim();
+        // Split content into tips by period, semicolon, or newline
+        let tipsArr = content.split(/[.;\n]/);
+        tipsArr = mergeHyphenLines(tipsArr);
+        tipsArr = cleanTipsArr(tipsArr);
+        // Remove leading bullets from tips
+        const cleanedTipsArr = tipsArr.map(tip => tip.startsWith('•') ? tip.slice(1).trim() : tip);
+        sections.push({ header: matches[i].header, tips: cleanedTipsArr });
+      }
+    } else {
+      // No headers found, fallback to splitting by period/semicolon/newline
+      let tipsArr = tips.split(/[.;\n]/);
+      tipsArr = mergeHyphenLines(tipsArr);
+      tipsArr = cleanTipsArr(tipsArr);
+      const cleanedTipsArr = tipsArr.map(tip => tip.startsWith('•') ? tip.slice(1).trim() : tip);
+      sections.push({ header: '', tips: cleanedTipsArr });
+    }
+    return sections;
+  }
   const [showShareMsg, setShowShareMsg] = useState(false);
   const [showPhrasesMsg, setShowPhrasesMsg] = useState(false);
   // Safety tips integration
@@ -240,9 +301,18 @@ function ViewTrip() {
                   color: '#333',
                   maxHeight: 300,
                   overflowY: 'auto',
-                  whiteSpace: 'pre-wrap'
+                  textAlign: 'left',
                 }}>
-                  {safetyTips.tips}
+                  {formatSafetyTips(safetyTips.tips).map((section, idx) => (
+                    <div key={idx} style={{ marginBottom: 14 }}>
+                      {section.header && <div style={{ fontWeight: 700, marginBottom: 6 }}>{section.header}</div>}
+                      <ul style={{ paddingLeft: 18, margin: 0 }}>
+                        {section.tips.map((tip, i) => (
+                          <li key={i} style={{ marginBottom: 4 }}>{tip}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
                 <button
                   onClick={() => setSafetyTips(null)}

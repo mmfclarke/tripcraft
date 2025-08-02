@@ -338,7 +338,7 @@ app.post('/trips/:id/safety-tips', async (req, res) => {
 
     const safetyTipsData = await response.json();
 
-    // Return the safety tips to frontend
+    // Return the safety tips to frontend exactly as received
     res.json({
       success: true,
       tripId: id,
