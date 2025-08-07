@@ -299,6 +299,51 @@ app.get('/trips', async (req, res) => {
 });
 
 // Safety Tips endpoint - microservice integration
+// Common Phrase Translation endpoint - microservice integration
+app.post('/api/phrases/translate', async (req, res) => {
+  try {
+    const { languageOrCountry, phraseType } = req.body;
+    if (!languageOrCountry || !phraseType) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
+    }
+
+    // Prepare request for microservice
+    const phrasesRequest = {
+      languageOrCountry,
+      phraseType
+    };
+
+    // Call the Phrase Translation microservice
+    const microserviceUrl = process.env.PHRASE_MICROSERVICE_URL || 'http://localhost:3002';
+    const response = await fetch(`${microserviceUrl}/generate-phrases`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(phrasesRequest)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Microservice responded with status: ${response.status}`);
+    }
+
+    const phrasesData = await response.json();
+
+    // Return the phrases to frontend exactly as received
+    res.json({
+      success: true,
+      phrases: phrasesData.phrases || [],
+      error: phrasesData.error || null
+    });
+  } catch (error) {
+    console.error('Error fetching phrases:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch phrases',
+      details: error.message
+    });
+  }
+});
 app.post('/trips/:id/safety-tips', async (req, res) => {
   try {
     const { id } = req.params;

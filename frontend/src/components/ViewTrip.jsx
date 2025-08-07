@@ -2,6 +2,44 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 function ViewTrip() {
+  // Phrase translation state
+  const [language, setLanguage] = useState('');
+  const [phraseType, setPhraseType] = useState('');
+  const [phrases, setPhrases] = useState([]);
+  const [phrasesLoading, setPhrasesLoading] = useState(false);
+  const [phrasesError, setPhrasesError] = useState('');
+
+  // Handler for Get Phrases button
+  const handleGetPhrases = async (e) => {
+    e.preventDefault();
+    setPhrasesError('');
+    setPhrases([]);
+    if (!language.trim() || !phraseType.trim()) {
+      setPhrasesError('Please fill in both fields');
+      return;
+    }
+    setPhrasesLoading(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/phrases/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          languageOrCountry: language.trim(),
+          phraseType: phraseType.trim()
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setPhrases(data.phrases);
+      } else {
+        setPhrasesError(data.error || 'Failed to get phrases');
+      }
+    } catch (err) {
+      setPhrasesError('Failed to connect to translation service');
+    } finally {
+      setPhrasesLoading(false);
+    }
+  };
   // Helper to format safety tips into sections and bullet points
   function formatSafetyTips(tips) {
     if (!tips) return [];
@@ -332,7 +370,7 @@ function ViewTrip() {
               </div>
             )}
             </div>
-            {/* Common Translation Phrase Box */}
+            {/* Phrase Translation Box */}
             <div
               style={{
                 background: '#fff',
@@ -349,7 +387,6 @@ function ViewTrip() {
                 minWidth: 220,
                 maxWidth: 260,
               }}
-              onMouseLeave={() => setShowPhrasesMsg(false)}
             >
               <div style={{ fontWeight: 700, fontSize: '1.08rem', marginBottom: 8, textAlign: 'center', color: '#000000ff' }}>
                 Common Phrase Translations
@@ -357,13 +394,15 @@ function ViewTrip() {
               <div style={{ marginBottom: 10, textAlign: 'center', fontSize: '0.93rem', color: '#333' }}>
                 Get helpful phrases for your trip. Choose a language/country and phrase type!
               </div>
-              <form style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <form style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }} onSubmit={handleGetPhrases}>
                 <label style={{ fontWeight: 600, fontSize: '0.97rem', marginBottom: 2, color: '#000000ff', textAlign: 'left', width: '100%' }}>
                   Language or Country
                 </label>
                 <input
                   type="text"
                   placeholder='"Spanish" or "Mexico"'
+                  value={language}
+                  onChange={e => setLanguage(e.target.value)}
                   style={{
                     width: '90%',
                     alignSelf: 'center',
@@ -380,6 +419,8 @@ function ViewTrip() {
                 <input
                   type="text"
                   placeholder="greeting, food, etc."
+                  value={phraseType}
+                  onChange={e => setPhraseType(e.target.value)}
                   style={{
                     width: '90%',
                     alignSelf: 'center',
@@ -390,10 +431,11 @@ function ViewTrip() {
                   }}
                 />
                 <button
-                  type="button"
+                  type="submit"
+                  disabled={phrasesLoading}
                   style={{
                     marginTop: 6,
-                    background: '#1976d2',
+                    background: phrasesLoading ? '#ccc' : '#1976d2',
                     color: '#fff',
                     fontWeight: 700,
                     fontSize: '0.98rem',
@@ -401,19 +443,41 @@ function ViewTrip() {
                     borderRadius: 5,
                     padding: '7px 0',
                     width: '100%',
-                    cursor: 'pointer',
+                    cursor: phrasesLoading ? 'not-allowed' : 'pointer',
                     boxShadow: '0 1px 2px rgba(25, 118, 210, 0.08)',
                     transition: 'background 0.2s, color 0.2s',
                   }}
-                  onMouseOver={e => { e.target.style.background = '#1251a3'; }}
-                  onMouseOut={e => { e.target.style.background = '#1976d2'; }}
-                  onClick={() => setShowPhrasesMsg(true)}
+                  onMouseOver={e => { if (!phrasesLoading) e.target.style.background = '#1251a3'; }}
+                  onMouseOut={e => { if (!phrasesLoading) e.target.style.background = '#1976d2'; }}
                 >
-                  Get Phrases
+                  {phrasesLoading ? 'Getting Phrases...' : 'Get Phrases'}
                 </button>
-                {showPhrasesMsg && (
-                  <div style={{ color: 'green', marginTop: 10, fontWeight: 600, fontSize: '1.01rem', textAlign: 'center' }}>
-                    Feature Coming Soon!
+                {phrasesError && (
+                  <div style={{ color: 'red', marginTop: 10, fontWeight: 600, fontSize: '0.9rem', textAlign: 'center' }}>
+                    {phrasesError}
+                  </div>
+                )}
+                {phrases.length > 0 && (
+                  <div style={{
+                    marginTop: 10,
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: 5,
+                    padding: 8
+                  }}>
+                    {phrases.map((phrase, index) => (
+                      <div key={index} style={{
+                        marginBottom: 8,
+                        padding: 6,
+                        background: '#f5f5f5',
+                        borderRadius: 4,
+                        fontSize: '0.85rem'
+                      }}>
+                        <div style={{ fontWeight: 600, color: '#333' }}>{phrase.english}</div>
+                        <div style={{ color: '#1976d2', fontStyle: 'italic' }}>{phrase.translation}</div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </form>
