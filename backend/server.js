@@ -35,9 +35,9 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable CORS for frontend connection (must be before routes)
+// Enable CORS for all origins (for deployment and testing)
 app.use(cors({
-  origin: 'http://localhost:3000', // My React app's URL
+  origin: true,
   credentials: true
 }));
 
