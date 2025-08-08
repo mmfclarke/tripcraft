@@ -20,7 +20,8 @@ function ViewTrip() {
     }
     setPhrasesLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/phrases/translate', {
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/phrases/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -125,7 +126,8 @@ function ViewTrip() {
     setIsExporting(true);
     setExportError('');
     try {
-      const response = await fetch(`/api/trips/${trip._id}/export`, {
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/trips/${trip._id}/export`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -173,7 +175,8 @@ function ViewTrip() {
     setSafetyLoading(true);
     setSafetyError('');
     try {
-      const response = await fetch(`http://localhost:5000/trips/${trip._id}/safety-tips`, {
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/trips/${trip._id}/safety-tips`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -201,7 +204,8 @@ function ViewTrip() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    fetch(`http://localhost:5000/trips/${id}`)
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    fetch(`${apiUrl}/trips/${id}`)
       .then(res => res.json())
       .then(data => {
         if (data.trip) {

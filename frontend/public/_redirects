@@ -1,0 +1,2 @@
+# Netlify redirects for API requests
+/api/*  https://tripcraft.onrender.com/api/:splat  200
