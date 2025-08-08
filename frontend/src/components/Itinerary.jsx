@@ -27,9 +27,7 @@ function Itinerary() {
     setItineraryError('');
     try {
       // Use absolute URL for backend in development, relative in production
-      const backendUrl = window.location.hostname === 'localhost'
-        ? `http://localhost:5000/trips/${trip._id}/itinerary-suggestions`
-        : `/trips/${trip._id}/itinerary-suggestions`;
+      const backendUrl = `${process.env.REACT_APP_API_URL}/trips/${trip._id}/itinerary-suggestions`;
       const response = await fetch(backendUrl, {
         method: 'POST',
         headers: {
@@ -74,7 +72,7 @@ function Itinerary() {
       setLoading(false);
       return;
     }
-    fetch(`http://localhost:5000/trips/${tripId}`)
+    fetch(`${process.env.REACT_APP_API_URL}/trips/${tripId}`)
       .then(res => res.json())
       .then(data => {
         if (data.trip) {
@@ -209,7 +207,7 @@ function Itinerary() {
       }
       // Debug log outgoing request
       console.log('Saving itinerary to backend:', JSON.stringify({ itinerary: fixedItinerary }, null, 2));
-      const res = await fetch(`http://localhost:5000/trips/${trip._id}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/trips/${trip._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ itinerary: fixedItinerary })
@@ -226,7 +224,7 @@ function Itinerary() {
         setSaveError((data && data.error ? data.error : 'Failed to save itinerary') + (data && data.details ? `: ${data.details}` : ''));
       } else {
         // Reload trip from backend to ensure UI is up-to-date, then show success message and route after delay
-        fetch(`http://localhost:5000/trips/${trip._id}`)
+        fetch(`${process.env.REACT_APP_API_URL}/trips/${trip._id}`)
           .then(res2 => res2.json())
           .then(data2 => {
             if (data2.trip) {

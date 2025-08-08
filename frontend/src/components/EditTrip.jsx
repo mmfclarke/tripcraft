@@ -18,7 +18,7 @@ function EditTrip() {
     if (!id) return;
     setError('');
     setSuccess('');
-    fetch(`http://localhost:5000/trips/${id}`)
+    fetch(`${process.env.REACT_APP_API_URL}/trips/${id}`)
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch trip');
         return res.json();
@@ -51,7 +51,7 @@ function EditTrip() {
     setError('');
     setSuccess('');
     try {
-      const res = await fetch(`http://localhost:5000/trips/${id}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/trips/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

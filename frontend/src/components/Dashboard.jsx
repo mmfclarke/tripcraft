@@ -16,7 +16,7 @@ function Dashboard() {
       setLoading(false);
       return;
     }
-    fetch(`http://localhost:5000/trips?username=${encodeURIComponent(username)}`)
+    fetch(`${process.env.REACT_APP_API_URL}/trips?username=${encodeURIComponent(username)}`)
       .then(res => res.json())
       .then(data => {
         setTrips(data.trips || []);
@@ -32,7 +32,7 @@ function Dashboard() {
     if (!window.confirm('Are you sure you want to delete this trip? You will lose all your awesome trip details!')) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`http://localhost:5000/trips/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/trips/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setTrips(trips => trips.filter(t => t._id !== id));
       } else {

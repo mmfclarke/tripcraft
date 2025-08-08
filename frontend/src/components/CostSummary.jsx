@@ -26,7 +26,7 @@ function CostSummary() {
       setLoading(false);
       return;
     }
-    fetch(`http://localhost:5000/trips/${tripId}`)
+    fetch(`${process.env.REACT_APP_API_URL}/trips/${tripId}`)
       .then(res => res.json())
       .then(data => {
         if (data.trip) {

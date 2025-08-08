@@ -28,7 +28,7 @@ function CreateTrip() {
     setSuccess('');
     try {
       const username = localStorage.getItem('username');
-      const res = await fetch('http://localhost:5000/trips', {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/trips`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
