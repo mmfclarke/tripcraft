@@ -25,17 +25,21 @@ function Itinerary() {
     }
     setItineraryLoading(true);
     setItineraryError('');
-    // setShowComingSoon removed
     try {
-      const response = await fetch(`/api/trips/${trip._id}/itinerary-suggestions`, {
+      // Use absolute URL for backend in development, relative in production
+      const backendUrl = window.location.hostname === 'localhost'
+        ? `http://localhost:5000/trips/${trip._id}/itinerary-suggestions`
+        : `/trips/${trip._id}/itinerary-suggestions`;
+      const response = await fetch(backendUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         }
       });
       const data = await response.json();
-      if (data.success && data.itinerarySuggestions) {
-        setItinerarySuggestions(data.itinerarySuggestions);
+      if (data.success && (data.suggestions || data.activities)) {
+        // Support both 'suggestions' and 'activities' keys
+        setItinerarySuggestions(data.suggestions ? { ...data, activities: data.suggestions } : data);
       } else {
         throw new Error(data.error || 'Failed to fetch suggestions');
       }
@@ -438,7 +442,10 @@ function Itinerary() {
                     Activity Suggestions for {itinerarySuggestions.location}
                   </div>
                   <div style={{ fontSize: '0.8rem', marginBottom: 12, textAlign: 'center', color: '#666' }}>
-                    {itinerarySuggestions.tripDays} day trip • {itinerarySuggestions.season} season
+                    {itinerarySuggestions.tripDays ? `${itinerarySuggestions.tripDays} day trip` : ''}
+                    {itinerarySuggestions.tripDays && itinerarySuggestions.season ? ' • ' : ''}
+                    {itinerarySuggestions.season ? `${itinerarySuggestions.season} season` : ''}
+                    {(!itinerarySuggestions.tripDays && !itinerarySuggestions.season) ? 'No trip details available.' : ''}
                   </div>
                   <div style={{
                     fontSize: '0.85rem',

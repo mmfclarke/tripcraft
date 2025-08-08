@@ -414,7 +414,7 @@ app.post('/trips/:id/itinerary-suggestions', async (req, res) => {
 
     // Prepare data for microservice
     const itineraryRequest = {
-      destination: trip.destination,
+      location: trip.destination,
       startDate: trip.startDate,
       endDate: trip.endDate,
       numberOfTravelers: trip.travelers
@@ -439,12 +439,11 @@ app.post('/trips/:id/itinerary-suggestions', async (req, res) => {
 
     const itineraryData = await response.json();
 
-    // Return the itinerary suggestions to frontend exactly as received
+    // Return all fields from microservice response to frontend
     res.json({
       success: true,
       tripId: id,
-      suggestions: itineraryData.suggestions || [],
-      error: itineraryData.error || null
+      ...itineraryData
     });
 
   } catch (error) {
