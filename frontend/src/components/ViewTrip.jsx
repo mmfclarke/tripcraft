@@ -70,11 +70,21 @@ function ViewTrip() {
       }
       return merged;
     }
-    // Remove lines that are just a colon or empty, and strip leading colon from tips
+    // Remove lines that are just a colon, asterisk, or single-word section header, and strip leading colon from tips
     function cleanTipsArr(arr) {
       return arr
         .map(t => t.trim())
-        .filter(t => t.length > 0 && t !== ':' && t !== '•' && t !== '-')
+        // Remove lines that are just punctuation, asterisk, or short fragment (with or without leading punctuation)
+        .filter(t => {
+          if (!t || t === ':' || t === '•' || t === '-' || t === '*') return false;
+          // Remove lines like "'t:", "s:", "ce:", etc. (with or without leading punctuation)
+          if (/^[^\w\d]*[a-zA-Z]{1,3}:$/.test(t)) return false;
+          // Remove lines that are just a single word (with or without punctuation)
+          if (/^[^\w\d]*[a-zA-Z]+['"]?:?$/.test(t)) return false;
+          return true;
+        })
+        // Strip leading punctuation and short fragment prefixes from start of tip lines
+        .map(t => t.replace(/^[^\w\d]*[a-zA-Z]{1,3}:(\s*)/, ''))
         .map(t => t.startsWith(':') ? t.slice(1).trim() : t);
     }
     let sections = [];
@@ -102,6 +112,55 @@ function ViewTrip() {
     return sections;
   }
   const [showShareMsg, setShowShareMsg] = useState(false);
+  // Export trip states
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
+  // Export handler function
+  const handleExportTrip = async () => {
+    if (!trip?._id) {
+      setExportError('No trip data available for export');
+      return;
+    }
+
+    setIsExporting(true);
+    setExportError('');
+    try {
+      const response = await fetch(`/api/trips/${trip._id}/export`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        let errorData = null;
+        try {
+          errorData = await response.json();
+        } catch {}
+        throw new Error((errorData && errorData.error) || 'Export failed');
+      }
+
+      // Create blob from response and trigger download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${trip.tripName || 'trip'}_export.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setShowShareMsg(true);
+      setTimeout(() => setShowShareMsg(false), 3000);
+    } catch (error) {
+      console.error('Export error:', error);
+      setExportError(error.message);
+      setTimeout(() => setExportError(''), 5000);
+    } finally {
+      setIsExporting(false);
+    }
+  };
   // Safety tips integration
   const [safetyTips, setSafetyTips] = useState(null);
   const [safetyLoading, setSafetyLoading] = useState(false);
@@ -581,33 +640,43 @@ function ViewTrip() {
                   </div>
                   <button
                     style={{
-                      background: '#27ae60', // Green
+                      background: isExporting ? '#95a5a6' : '#27ae60',
                       color: '#fff',
                       fontWeight: 700,
                       fontSize: '0.93rem',
                       border: 'none',
                       borderRadius: 5,
                       padding: '6px 14px',
-                      cursor: 'pointer',
+                      cursor: isExporting ? 'not-allowed' : 'pointer',
                       boxShadow: '0 1px 4px rgba(39, 174, 96, 0.08)',
                       transition: 'background 0.2s, color 0.2s',
                       outline: 'none',
                       letterSpacing: '0.01em',
-                      marginBottom: showShareMsg ? 6 : 0,
+                      marginBottom: showShareMsg || exportError ? 6 : 0,
                     }}
                     onMouseOver={e => {
-                      e.target.style.background = '#219150';
+                      if (!isExporting) {
+                        e.target.style.background = '#219150';
+                      }
                     }}
                     onMouseOut={e => {
-                      e.target.style.background = '#27ae60';
+                      if (!isExporting) {
+                        e.target.style.background = '#27ae60';
+                      }
                     }}
-                    onClick={() => setShowShareMsg(true)}
+                    onClick={handleExportTrip}
+                    disabled={isExporting}
                   >
-                    Export + Share
+                    {isExporting ? 'Exporting...' : 'Export + Share'}
                   </button>
-                  {showShareMsg && (
+                  {showShareMsg && !exportError && (
                     <div style={{ color: '#27ae60', fontWeight: 600, fontSize: '1.05rem', marginTop: 0, marginLeft: 12 }}>
-                      Feature coming soon...
+                      Trip exported successfully!
+                    </div>
+                  )}
+                  {exportError && (
+                    <div style={{ color: '#e74c3c', fontWeight: 600, fontSize: '1.05rem', marginTop: 0, marginLeft: 12 }}>
+                      Export failed: {exportError}
                     </div>
                   )}
                 </div>

@@ -399,7 +399,78 @@ app.post('/trips/:id/safety-tips', async (req, res) => {
   }
 });
 
-// AI-powered Itinerary Suggestion endpoint - microservice integration
+// Export trip as PDF endpoint
+app.post('/api/trips/:id/export', async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Get trip data from database
+    const trip = await Trip.findById(id);
+    if (!trip) {
+      return res.status(404).json({ success: false, error: 'Trip not found' });
+    }
+
+    // Prepare cost summary
+    let total = 0;
+    if (Array.isArray(trip.itinerary)) {
+      trip.itinerary.forEach(day => {
+        if (Array.isArray(day.activities)) {
+          day.activities.forEach(act => {
+            const cost = parseFloat(act.cost);
+            if (!isNaN(cost)) total += cost;
+          });
+        }
+      });
+    }
+    const travelers = parseInt(trip.travelers) || 1;
+    const costSummary = {
+      total,
+      perTraveler: total / travelers
+    };
+
+    // Call export microservice
+    const microserviceUrl = process.env.EXPORT_MICROSERVICE_URL || 'http://localhost:3004';
+    console.log('[Export] Calling microservice:', `${microserviceUrl}/export`);
+    console.log('[Export] Payload:', JSON.stringify({ trip, costSummary }, null, 2));
+    const exportResponse = await fetch(`${microserviceUrl}/export`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ trip, costSummary })
+    });
+
+    console.log('[Export] Microservice response status:', exportResponse.status);
+    if (!exportResponse.ok) {
+      let errorMsg = `Export microservice responded with status: ${exportResponse.status}`;
+      try {
+        const errText = await exportResponse.text();
+        console.log('[Export] Microservice error body:', errText);
+        // Try to parse error JSON
+        let errData;
+        try { errData = JSON.parse(errText); } catch {}
+        if (errData && errData.error) errorMsg = errData.error;
+      } catch (e) {
+        console.log('[Export] Error reading microservice error body:', e);
+      }
+      return res.status(500).json({ success: false, error: errorMsg });
+    }
+
+    // Stream PDF response to client
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${trip.tripName || 'trip'}_export.pdf"`);
+    if (exportResponse.body) {
+      exportResponse.body.pipe(res);
+    } else {
+      console.error('[Export] Microservice did not return a PDF stream.');
+      res.status(500).json({ success: false, error: 'Microservice did not return a PDF stream.' });
+    }
+  } catch (error) {
+    console.error('Error exporting trip:', error);
+    res.status(500).json({ success: false, error: 'Failed to export trip', details: error.message });
+  }
+});
+
+// Itinerary Suggestion endpoint - microservice integration
 app.post('/trips/:id/itinerary-suggestions', async (req, res) => {
   try {
     const { id } = req.params;
