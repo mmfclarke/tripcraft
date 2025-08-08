@@ -298,7 +298,6 @@ app.get('/trips', async (req, res) => {
   }
 });
 
-// Safety Tips endpoint - microservice integration
 // Common Phrase Translation endpoint - microservice integration
 app.post('/api/phrases/translate', async (req, res) => {
   try {
@@ -356,7 +355,7 @@ app.post('/trips/:id/safety-tips', async (req, res) => {
       });
     }
 
-    // Prepare data for microservice (matching your teammate's expected format)
+    // Prepare data for microservice
     const safetyTipsRequest = {
       location: trip.destination,
       startDate: trip.startDate,
@@ -395,6 +394,64 @@ app.post('/trips/:id/safety-tips', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch safety tips',
+      details: error.message
+    });
+  }
+});
+
+// AI-powered Itinerary Suggestion endpoint - microservice integration
+app.post('/trips/:id/itinerary-suggestions', async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Get trip data from database
+    const trip = await Trip.findById(id);
+    if (!trip) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Trip not found' 
+      });
+    }
+
+    // Prepare data for microservice
+    const itineraryRequest = {
+      destination: trip.destination,
+      startDate: trip.startDate,
+      endDate: trip.endDate,
+      numberOfTravelers: trip.travelers
+    };
+
+    // Call the Itinerary Generator microservice
+    const microserviceUrl = process.env.ITINERARY_MICROSERVICE_URL || 'http://localhost:3003';
+
+    console.log('Calling itinerary microservice with data:', itineraryRequest);
+
+    const response = await fetch(`${microserviceUrl}/generate-itinerary`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(itineraryRequest)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Microservice responded with status: ${response.status}`);
+    }
+
+    const itineraryData = await response.json();
+
+    // Return the itinerary suggestions to frontend exactly as received
+    res.json({
+      success: true,
+      tripId: id,
+      suggestions: itineraryData.suggestions || [],
+      error: itineraryData.error || null
+    });
+
+  } catch (error) {
+    console.error('Error fetching itinerary suggestions:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch itinerary suggestions',
       details: error.message
     });
   }

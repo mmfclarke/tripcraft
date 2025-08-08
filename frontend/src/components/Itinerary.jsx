@@ -13,7 +13,45 @@ function Itinerary() {
     );
   }
   const navigate = useNavigate();
-  const [showComingSoon, setShowComingSoon] = useState(false);
+  // Inspiration/Suggestion state
+  const [itinerarySuggestions, setItinerarySuggestions] = useState(null);
+  const [itineraryLoading, setItineraryLoading] = useState(false);
+  const [itineraryError, setItineraryError] = useState('');
+  // Fetch itinerary suggestions from backend
+  const fetchItinerarySuggestions = async () => {
+    if (!trip?._id) {
+      setItineraryError('No trip data available');
+      return;
+    }
+    setItineraryLoading(true);
+    setItineraryError('');
+    // setShowComingSoon removed
+    try {
+      const response = await fetch(`/api/trips/${trip._id}/itinerary-suggestions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      if (data.success && data.itinerarySuggestions) {
+        setItinerarySuggestions(data.itinerarySuggestions);
+      } else {
+        throw new Error(data.error || 'Failed to fetch suggestions');
+      }
+    } catch (error) {
+      console.error('Error fetching itinerary suggestions:', error);
+      setItineraryError(error.message || 'Failed to load suggestions');
+    } finally {
+      setItineraryLoading(false);
+    }
+  };
+
+  // Helper to format activities for display
+  const formatActivities = (activities) => {
+    if (!Array.isArray(activities)) return [];
+    return activities.map((activity, index) => ({ ...activity, id: index + 1 }));
+  };
   const [trip, setTrip] = useState(null);
   const [selectedDay, setSelectedDay] = useState(1);
   const [itinerary, setItinerary] = useState([]);
@@ -342,16 +380,16 @@ function Itinerary() {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                minWidth: 205,
-                maxWidth: 215,
+                minWidth: 220,
+                maxWidth: 260,
               }}
-              onMouseLeave={() => setShowComingSoon(false)}
+              // onMouseLeave handler removed (showComingSoon state no longer used)
             >
               <div style={{ fontWeight: 700, fontSize: '1.08rem', marginBottom: 10, textAlign: 'center' }}>
                 Need inspiration?
               </div>
               <div style={{ marginBottom: 14, textAlign: 'center', fontSize: '0.93rem' }}>
-                Click the button below for activity suggestions!
+                Get AI-powered activity suggestions for your trip!
               </div>
               <button
                 style={{
@@ -375,11 +413,91 @@ function Itinerary() {
                   e.target.style.background = '#ffe066';
                   e.target.style.border = '2px solid #ffe066';
                 }}
-                onClick={() => setShowComingSoon(true)}
-              >Get Suggestions</button>
-              {showComingSoon && (
-                <div style={{ color: 'green', marginTop: 10, fontWeight: 600, fontSize: '1.01rem', textAlign: 'center' }}>
-                  Feature Coming Soon!
+                onClick={fetchItinerarySuggestions}
+                disabled={itineraryLoading}
+              >
+                {itineraryLoading ? 'Getting Suggestions...' : 'Get Suggestions'}
+              </button>
+              {itineraryError && (
+                <div style={{ color: 'red', marginTop: 10, fontWeight: 600, fontSize: '0.9rem', textAlign: 'center' }}>
+                  {itineraryError}
+                </div>
+              )}
+              {/* Itinerary Suggestions Results Section */}
+              {itinerarySuggestions && (
+                <div style={{
+                  background: '#fff',
+                  border: '2px solid #4caf50',
+                  borderRadius: 10,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  padding: '16px',
+                  marginTop: 18,
+                  maxWidth: 260,
+                }}>
+                  <div style={{ fontWeight: 700, fontSize: '1.08rem', marginBottom: 12, textAlign: 'center', color: '#4caf50' }}>
+                    Activity Suggestions for {itinerarySuggestions.location}
+                  </div>
+                  <div style={{ fontSize: '0.8rem', marginBottom: 12, textAlign: 'center', color: '#666' }}>
+                    {itinerarySuggestions.tripDays} day trip • {itinerarySuggestions.season} season
+                  </div>
+                  <div style={{
+                    fontSize: '0.85rem',
+                    lineHeight: 1.5,
+                    color: '#333',
+                    maxHeight: 400,
+                    overflowY: 'auto',
+                    textAlign: 'left',
+                  }}>
+                    {formatActivities(itinerarySuggestions.activities).map((activity) => (
+                      <div key={activity.id} style={{
+                        marginBottom: 16,
+                        paddingBottom: 12,
+                        borderBottom: activity.id < itinerarySuggestions.activities.length ? '1px solid #eee' : 'none'
+                      }}>
+                        <div style={{ fontWeight: 700, marginBottom: 6, color: '#2c5282' }}>
+                          {activity.id}. {activity.activity}
+                        </div>
+                        <div style={{ marginBottom: 6, fontSize: '0.82rem' }}>
+                          {activity.description}
+                        </div>
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: '#666',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '4px'
+                        }}>
+                          <span style={{
+                            background: '#e2e8f0',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontSize: '0.7rem'
+                          }}>
+                            {activity.category}
+                          </span>
+                          <span style={{ fontSize: '0.7rem', fontStyle: 'italic' }}>
+                            {activity.seasonalNote}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setItinerarySuggestions(null)}
+                    style={{
+                      marginTop: 12,
+                      background: '#f5f5f5',
+                      border: '1px solid #ddd',
+                      borderRadius: 5,
+                      padding: '6px 12px',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      width: '100%'
+                    }}
+                  >
+                    Hide Suggestions
+                  </button>
                 </div>
               )}
             </div>

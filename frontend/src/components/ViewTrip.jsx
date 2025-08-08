@@ -102,7 +102,6 @@ function ViewTrip() {
     return sections;
   }
   const [showShareMsg, setShowShareMsg] = useState(false);
-  const [showPhrasesMsg, setShowPhrasesMsg] = useState(false);
   // Safety tips integration
   const [safetyTips, setSafetyTips] = useState(null);
   const [safetyLoading, setSafetyLoading] = useState(false);
@@ -280,7 +279,6 @@ function ViewTrip() {
                 minWidth: 220,
                 maxWidth: 260,
               }}
-              // ...existing code...
             >
               <div style={{ fontWeight: 700, fontSize: '1.08rem', marginBottom: 10, textAlign: 'center' }}>
                 Local Safety & Etiquette Tips
